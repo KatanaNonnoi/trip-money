@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>กองกลางทริป</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>" />
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🧳</div>
+      <div>
+        <h1 id="tripName">ทริปของเรา</h1>
+        <p class="sub">สรุปเงินกองกลาง · <span id="syncStatus" class="sync">กำลังโหลด…</span></p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-ghost" id="btnRefresh" title="โหลดข้อมูลล่าสุด">↻ รีเฟรช</button>
+      <button class="btn btn-violet" id="btnSettings">⚙ ตั้งค่า</button>
+    </div>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    🧪 <b>โหมดทดลอง</b> — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น ใส่ URL ของ Google Apps Script ใน <code>config.js</code> หรือหน้า “ตั้งค่า” เพื่อเก็บลง Google Sheet
+  </div>
+
+  <main>
+    <!-- Stat cards -->
+    <section class="stats">
+      <article class="stat stat-green">
+        <span class="stat-icon">💰</span>
+        <p class="stat-label">เก็บเงินได้แล้ว</p>
+        <p class="stat-value" id="sPaid">฿0</p>
+        <div class="stat-bar"><span id="sPaidBar"></span></div>
+        <p class="stat-foot" id="sPaidFoot">จากเป้า ฿0</p>
+      </article>
+      <article class="stat stat-pink">
+        <span class="stat-icon">🧾</span>
+        <p class="stat-label">ค่าใช้จ่ายรวม</p>
+        <p class="stat-value" id="sExpense">฿0</p>
+        <p class="stat-foot" id="sExpenseFoot">0 รายการ</p>
+      </article>
+      <article class="stat" id="sBalanceCard">
+        <span class="stat-icon" id="sBalanceIcon">✨</span>
+        <p class="stat-label" id="sBalanceLabel">เงินคงเหลือ</p>
+        <p class="stat-value" id="sBalance">฿0</p>
+        <p class="stat-foot" id="sBalanceFoot">—</p>
+      </article>
+      <article class="stat stat-amber">
+        <span class="stat-icon">⏳</span>
+        <p class="stat-label">ยังค้างจ่าย</p>
+        <p class="stat-value" id="sOutstanding">฿0</p>
+        <p class="stat-foot" id="sOutstandingFoot">0 คนยังจ่ายไม่ครบ</p>
+      </article>
+    </section>
+
+    <!-- Diff summary -->
+    <section class="card summary">
+      <div class="summary-head">
+        <h2>⚖️ เทียบเงินที่เก็บ vs ค่าใช้จ่าย</h2>
+        <span class="pill" id="diffPill">—</span>
+      </div>
+      <div class="compare">
+        <div class="compare-row">
+          <span class="compare-label">เงินที่เก็บได้</span>
+          <div class="compare-track"><span class="fill fill-green" id="cPaid"></span></div>
+          <b id="cPaidVal">฿0</b>
+        </div>
+        <div class="compare-row">
+          <span class="compare-label">ค่าใช้จ่าย</span>
+          <div class="compare-track"><span class="fill fill-pink" id="cExp"></span></div>
+          <b id="cExpVal">฿0</b>
+        </div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+
+    <div class="grid-2">
+      <!-- Members -->
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>👥 สมาชิก <span class="count" id="memberCount">0</span></h2>
+          <button class="btn btn-pink" id="btnAddMember">＋ เพิ่มสมาชิก</button>
+        </div>
+        <div class="filters" id="memberFilters">
+          <button class="chip active" data-filter="all">ทั้งหมด</button>
+          <button class="chip" data-filter="full">✅ จ่ายครบ</button>
+          <button class="chip" data-filter="partial">🟡 จ่ายบางส่วน</button>
+          <button class="chip" data-filter="none">🔴 ยังไม่จ่าย</button>
+        </div>
+        <ul class="list" id="memberList"></ul>
+      </section>
+
+      <!-- Expenses -->
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>🧾 ค่าใช้จ่าย <span class="count" id="expenseCount">0</span></h2>
+          <button class="btn btn-orange" id="btnAddExpense">＋ เพิ่มรายการ</button>
+        </div>
+        <div class="catbar" id="catBar"></div>
+        <div class="catlegend" id="catLegend"></div>
+        <ul class="list" id="expenseList"></ul>
+        <div class="list-total">
+          <span>รวมค่าใช้จ่ายทั้งหมด</span>
+          <b id="expenseTotal">฿0</b>
+        </div>
+      </section>
+    </div>
+
+    <!-- Settlement -->
+    <section class="card panel">
+      <div class="panel-head">
+        <h2>🤝 สรุปหารเท่ากัน</h2>
+        <span class="pill pill-violet" id="shareInfo">คนละ ฿0</span>
+      </div>
+      <p class="muted">หารค่าใช้จ่ายจริงเท่ากันทุกคน แล้วเทียบกับที่แต่ละคนจ่ายมาแล้ว</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>สมาชิก</th><th class="num">จ่ายแล้ว</th><th class="num">ส่วนที่ต้องออก</th><th class="num">ผลลัพธ์</th></tr>
+          </thead>
+          <tbody id="settleBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">ข้อมูลเก็บบน Google Sheets · เว็บโฮสต์ฟรีบน GitHub Pages</footer>
+
+  <!-- Member dialog -->
+  <dialog id="memberDialog" class="modal">
+    <form method="dialog" id="memberForm">
+      <h3 id="memberDialogTitle">เพิ่มสมาชิก</h3>
+      <input type="hidden" name="id" />
+      <label>ชื่อ<input name="name" required maxlength="60" placeholder="เช่น ต้น" /></label>
+      <div class="row-2">
+        <label>ยอดที่ต้องจ่าย (บาท)<input name="due" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+        <label>จ่ายมาแล้ว (บาท)<input name="paid" type="number" min="0" step="0.01" inputmode="decimal" value="0" /></label>
+      </div>
+      <label>หมายเหตุ<input name="note" maxlength="120" placeholder="ไม่บังคับ" /></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
+        <button type="submit" class="btn btn-pink">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Pay dialog -->
+  <dialog id="payDialog" class="modal">
+    <form method="dialog" id="payForm">
+      <h3>💸 รับเงินจาก <span id="payName"></span></h3>
+      <input type="hidden" name="id" />
+      <p class="muted" id="payInfo"></p>
+      <label>จำนวนเงินที่จ่ายเพิ่ม (บาท)<input name="amount" type="number" step="0.01" inputmode="decimal" required /></label>
+      <div class="quick" id="payQuick"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
+        <button type="submit" class="btn btn-green">บันทึกการจ่าย</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Expense dialog -->
+  <dialog id="expenseDialog" class="modal">
+    <form method="dialog" id="expenseForm">
+      <h3 id="expenseDialogTitle">เพิ่มค่าใช้จ่าย</h3>
+      <input type="hidden" name="id" />
+      <label>รายการ<input name="title" required maxlength="80" placeholder="เช่น ค่าที่พักคืนแรก" /></label>
+      <div class="row-2">
+        <label>จำนวนเงิน (บาท)<input name="amount" type="number" min="0" step="0.01" inputmode="decimal" required /></label>
+        <label>วันที่<input name="date" type="date" /></label>
+      </div>
+      <label>หมวดหมู่</label>
+      <div class="cat-pick" id="catPick"></div>
+      <label>หมายเหตุ<input name="note" maxlength="120" placeholder="ไม่บังคับ" /></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
+        <button type="submit" class="btn btn-orange">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings dialog -->
+  <dialog id="settingsDialog" class="modal">
+    <form method="dialog" id="settingsForm">
+      <h3>⚙ ตั้งค่า</h3>
+      <label>ชื่อทริป<input name="tripName" maxlength="60" /></label>
+      <label>ยอดเก็บต่อคน (ค่าเริ่มต้นตอนเพิ่มสมาชิก)<input name="perPerson" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+      <label>รหัสแก้ไข <small>(ถ้าตั้ง EDIT_KEY ไว้ใน Apps Script)</small><input name="editKey" type="password" autocomplete="off" /></label>
+      <label>Apps Script URL <small>(เว้นว่าง = ใช้ค่าจาก config.js)</small><input name="apiUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" /></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
+        <button type="submit" class="btn btn-violet">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
