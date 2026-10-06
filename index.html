@@ -2,7 +2,9 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>กองกลางทริป</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -10,31 +12,32 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>" />
 </head>
-<body>
+<body data-tab="overview">
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
 
   <header class="topbar">
     <div class="brand">
       <div class="logo">🧳</div>
-      <div>
+      <div class="brand-text">
         <h1 id="tripName">ทริปของเรา</h1>
-        <p class="sub">สรุปเงินกองกลาง · <span id="syncStatus" class="sync">กำลังโหลด…</span></p>
+        <p class="sub"><span class="sub-label">สรุปเงินกองกลาง · </span><span id="syncStatus" class="sync">กำลังโหลด…</span></p>
       </div>
     </div>
     <div class="top-actions">
-      <button class="btn btn-ghost" id="btnRefresh" title="โหลดข้อมูลล่าสุด">↻ รีเฟรช</button>
-      <button class="btn btn-violet" id="btnSettings">⚙ ตั้งค่า</button>
+      <button class="btn btn-ghost" id="btnLock" title="โหมดแก้ไข">🔒<span class="lbl"> ใส่รหัสแก้ไข</span></button>
+      <button class="btn btn-ghost" id="btnRefresh" title="โหลดข้อมูลล่าสุด">↻<span class="lbl"> รีเฟรช</span></button>
+      <button class="btn btn-violet" id="btnSettings" title="ตั้งค่า">⚙<span class="lbl"> ตั้งค่า</span></button>
     </div>
   </header>
 
   <div id="demoBanner" class="banner" hidden>
-    🧪 <b>โหมดทดลอง</b> — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น ใส่ URL ของ Google Apps Script ใน <code>config.js</code> หรือหน้า “ตั้งค่า” เพื่อเก็บลง Google Sheet
+    🧪 <b>โหมดทดลอง</b> — ยังไม่ได้เชื่อม Google Sheet ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น
   </div>
 
   <main>
     <!-- Stat cards -->
-    <section class="stats">
+    <section class="stats" data-tab="overview">
       <article class="stat stat-green">
         <span class="stat-icon">💰</span>
         <p class="stat-label">เก็บเงินได้แล้ว</p>
@@ -63,7 +66,7 @@
     </section>
 
     <!-- Diff summary -->
-    <section class="card summary">
+    <section class="card summary" data-tab="overview">
       <div class="summary-head">
         <h2>⚖️ เทียบเงินที่เก็บ vs ค่าใช้จ่าย</h2>
         <span class="pill" id="diffPill">—</span>
@@ -83,61 +86,79 @@
       <div class="verdict" id="verdict"></div>
     </section>
 
+    <!-- Who still owes (phone overview only) -->
+    <section class="card panel mobile-only" data-tab="overview">
+      <div class="panel-head">
+        <h2>⏳ ใครยังค้างจ่าย</h2>
+        <button class="link-btn" data-go="members">ดูทั้งหมด ›</button>
+      </div>
+      <ul class="list" id="owingList"></ul>
+    </section>
+
     <div class="grid-2">
       <!-- Members -->
-      <section class="card panel">
+      <section class="card panel" data-tab="members">
         <div class="panel-head">
           <h2>👥 สมาชิก <span class="count" id="memberCount">0</span></h2>
-          <button class="btn btn-pink" id="btnAddMember">＋ เพิ่มสมาชิก</button>
+          <button class="btn btn-pink desktop-only" data-add="member">＋ เพิ่มสมาชิก</button>
         </div>
         <div class="filters" id="memberFilters">
           <button class="chip active" data-filter="all">ทั้งหมด</button>
           <button class="chip" data-filter="full">✅ จ่ายครบ</button>
-          <button class="chip" data-filter="partial">🟡 จ่ายบางส่วน</button>
+          <button class="chip" data-filter="partial">🟡 บางส่วน</button>
           <button class="chip" data-filter="none">🔴 ยังไม่จ่าย</button>
         </div>
         <ul class="list" id="memberList"></ul>
+        <p class="hint">แตะที่รายชื่อเพื่อแก้ไขหรือลบ</p>
       </section>
 
       <!-- Expenses -->
-      <section class="card panel">
+      <section class="card panel" data-tab="expenses">
         <div class="panel-head">
           <h2>🧾 ค่าใช้จ่าย <span class="count" id="expenseCount">0</span></h2>
-          <button class="btn btn-orange" id="btnAddExpense">＋ เพิ่มรายการ</button>
+          <button class="btn btn-orange desktop-only" data-add="expense">＋ เพิ่มรายการ</button>
         </div>
-        <div class="catbar" id="catBar"></div>
-        <div class="catlegend" id="catLegend"></div>
-        <ul class="list" id="expenseList"></ul>
         <div class="list-total">
           <span>รวมค่าใช้จ่ายทั้งหมด</span>
           <b id="expenseTotal">฿0</b>
         </div>
+        <div class="catbar" id="catBar"></div>
+        <div class="catlegend" id="catLegend"></div>
+        <ul class="list" id="expenseList"></ul>
+        <p class="hint">แตะที่รายการเพื่อแก้ไขหรือลบ</p>
       </section>
     </div>
 
     <!-- Settlement -->
-    <section class="card panel">
+    <section class="card panel" data-tab="settle">
       <div class="panel-head">
         <h2>🤝 สรุปหารเท่ากัน</h2>
         <span class="pill pill-violet" id="shareInfo">คนละ ฿0</span>
       </div>
       <p class="muted">หารค่าใช้จ่ายจริงเท่ากันทุกคน แล้วเทียบกับที่แต่ละคนจ่ายมาแล้ว</p>
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr><th>สมาชิก</th><th class="num">จ่ายแล้ว</th><th class="num">ส่วนที่ต้องออก</th><th class="num">ผลลัพธ์</th></tr>
-          </thead>
-          <tbody id="settleBody"></tbody>
-        </table>
+      <div class="settle-head">
+        <span>สมาชิก</span><span class="num">จ่ายแล้ว</span><span class="num">ส่วนที่ต้องออก</span><span class="num">ผลลัพธ์</span>
       </div>
+      <ul class="settle" id="settleList"></ul>
+      <div class="settle-sum" id="settleSum"></div>
     </section>
   </main>
 
   <footer class="foot">ข้อมูลเก็บบน Google Sheets · เว็บโฮสต์ฟรีบน GitHub Pages</footer>
 
+  <!-- Phone: floating add button + bottom tabs -->
+  <button class="fab" id="fab" aria-label="เพิ่ม">＋</button>
+  <nav class="tabbar" id="tabbar">
+    <button data-go="overview"><span class="ti">📊</span>ภาพรวม</button>
+    <button data-go="members"><span class="ti">👥<i class="dot" id="dotMembers" hidden></i></span>สมาชิก</button>
+    <button data-go="expenses"><span class="ti">🧾</span>ค่าใช้จ่าย</button>
+    <button data-go="settle"><span class="ti">🤝</span>หารเท่า</button>
+  </nav>
+
   <!-- Member dialog -->
   <dialog id="memberDialog" class="modal">
     <form method="dialog" id="memberForm">
+      <div class="grabber"></div>
       <h3 id="memberDialogTitle">เพิ่มสมาชิก</h3>
       <input type="hidden" name="id" />
       <label>ชื่อ<input name="name" required maxlength="60" placeholder="เช่น ต้น" /></label>
@@ -147,6 +168,8 @@
       </div>
       <label>หมายเหตุ<input name="note" maxlength="120" placeholder="ไม่บังคับ" /></label>
       <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="btnDelMember">🗑 ลบ</button>
+        <span class="spacer"></span>
         <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
         <button type="submit" class="btn btn-pink">บันทึก</button>
       </div>
@@ -156,6 +179,7 @@
   <!-- Pay dialog -->
   <dialog id="payDialog" class="modal">
     <form method="dialog" id="payForm">
+      <div class="grabber"></div>
       <h3>💸 รับเงินจาก <span id="payName"></span></h3>
       <input type="hidden" name="id" />
       <p class="muted" id="payInfo"></p>
@@ -171,6 +195,7 @@
   <!-- Expense dialog -->
   <dialog id="expenseDialog" class="modal">
     <form method="dialog" id="expenseForm">
+      <div class="grabber"></div>
       <h3 id="expenseDialogTitle">เพิ่มค่าใช้จ่าย</h3>
       <input type="hidden" name="id" />
       <label>รายการ<input name="title" required maxlength="80" placeholder="เช่น ค่าที่พักคืนแรก" /></label>
@@ -182,8 +207,26 @@
       <div class="cat-pick" id="catPick"></div>
       <label>หมายเหตุ<input name="note" maxlength="120" placeholder="ไม่บังคับ" /></label>
       <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="btnDelExpense">🗑 ลบ</button>
+        <span class="spacer"></span>
         <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
         <button type="submit" class="btn btn-orange">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Unlock dialog -->
+  <dialog id="unlockDialog" class="modal modal-sm">
+    <form method="dialog" id="unlockForm">
+      <div class="grabber"></div>
+      <div class="lock-icon">🔐</div>
+      <h3 class="center">ใส่รหัสเพื่อแก้ไข</h3>
+      <p class="muted center">ใส่ครั้งเดียว เครื่องนี้จะจำไว้</p>
+      <input name="key" type="password" autocomplete="current-password" placeholder="รหัสแก้ไข" required />
+      <p class="error" id="unlockError"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
+        <button type="submit" class="btn btn-violet" id="btnUnlock">ปลดล็อก</button>
       </div>
     </form>
   </dialog>
@@ -191,12 +234,13 @@
   <!-- Settings dialog -->
   <dialog id="settingsDialog" class="modal">
     <form method="dialog" id="settingsForm">
-      <h3>⚙ ตั้งค่า</h3>
+      <div class="grabber"></div>
+      <h3>⚙ ตั้งค่าทริป</h3>
       <label>ชื่อทริป<input name="tripName" maxlength="60" /></label>
       <label>ยอดเก็บต่อคน (ค่าเริ่มต้นตอนเพิ่มสมาชิก)<input name="perPerson" type="number" min="0" step="0.01" inputmode="decimal" /></label>
-      <label>รหัสแก้ไข <small>(ถ้าตั้ง EDIT_KEY ไว้ใน Apps Script)</small><input name="editKey" type="password" autocomplete="off" /></label>
-      <label>Apps Script URL <small>(เว้นว่าง = ใช้ค่าจาก config.js)</small><input name="apiUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" /></label>
       <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnLockOut">🔒 ล็อกเครื่องนี้</button>
+        <span class="spacer"></span>
         <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
         <button type="submit" class="btn btn-violet">บันทึก</button>
       </div>
